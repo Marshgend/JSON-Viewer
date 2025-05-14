@@ -90,7 +90,8 @@ function renderPlan() {
       menuDiv.innerHTML = `
         <div class="menu-option-header">
           <span class="drag-handle" title="Arrastrar para reordenar">&#x2630;</span>
-          <span class="editable${isEmpty(menuOption.menuName) ? ' placeholder' : ''}" tabindex="0" data-edit="menuName" data-timeslot="${slot.key}" data-menuidx="${menuIdx}">
+          <span class="editable menu-name${isEmpty(menuOption.menuName) ? ' placeholder' : ''}" tabindex="0"
+            data-edit="menuName" data-timeslot="${slot.key}" data-menuidx="${menuIdx}">
             ${isEmpty(menuOption.menuName) ? '[Editar nombre de menú]' : escapeHtml(menuOption.menuName)}
           </span>
           <button class="add-btn" data-action="add-dish" data-timeslot="${slot.key}" data-menuidx="${menuIdx}" title="Añadir plato">+ Plato</button>
@@ -108,7 +109,8 @@ function renderPlan() {
         dishDiv.innerHTML = `
           <div class="dish-header">
             <span class="drag-handle" title="Arrastrar para reordenar">&#x2630;</span>
-            <span class="editable${isEmpty(dish.name) ? ' placeholder' : ''}" tabindex="0" data-edit="dishName" data-timeslot="${slot.key}" data-menuidx="${menuIdx}" data-dishidx="${dishIdx}">
+            <span class="editable dish-name${isEmpty(dish.name) ? ' placeholder' : ''}" tabindex="0"
+              data-edit="dishName" data-timeslot="${slot.key}" data-menuidx="${menuIdx}" data-dishidx="${dishIdx}">
               ${isEmpty(dish.name) ? '[Editar nombre de plato]' : escapeHtml(dish.name)}
             </span>
             <button class="add-btn" data-action="add-ingredient" data-timeslot="${slot.key}" data-menuidx="${menuIdx}" data-dishidx="${dishIdx}" title="Añadir ingrediente">+ Ingrediente</button>
@@ -126,26 +128,39 @@ function renderPlan() {
           li.dataset.dishidx = dishIdx;
           li.dataset.menuidx = menuIdx;
           li.dataset.timeslot = slot.key;
-          // Nombre
+          // --- NUEVO RENDER DE INGREDIENTE ---
           li.innerHTML = `
             <span class="drag-handle" title="Arrastrar para reordenar">&#x2630;</span>
-            <span class="editable ingredient-name${isEmpty(ing.name) ? ' placeholder' : ''}" tabindex="0" data-edit="ingredientName" data-timeslot="${slot.key}" data-menuidx="${menuIdx}" data-dishidx="${dishIdx}" data-ingidx="${ingIdx}">
+            <span class="editable ingredient-name${isEmpty(ing.name) ? ' placeholder' : ''}" tabindex="0"
+              data-edit="ingredientName" data-timeslot="${slot.key}" data-menuidx="${menuIdx}"
+              data-dishidx="${dishIdx}" data-ingidx="${ingIdx}">
               ${isEmpty(ing.name) ? '[Ingrediente]' : escapeHtml(ing.name)}
             </span>
-            <span>
-              <input type="number" min="0" step="any" class="inline-edit" style="width:60px;" data-edit="metricQuantity" data-timeslot="${slot.key}" data-menuidx="${menuIdx}" data-dishidx="${dishIdx}" data-ingidx="${ingIdx}" value="${isEmpty(ing.metricQuantity) ? '' : ing.metricQuantity}" placeholder="Cantidad" />
-              <span class="editable${isEmpty(ing.metricUnit) ? ' placeholder' : ''}" tabindex="0" data-edit="metricUnit" data-timeslot="${slot.key}" data-menuidx="${menuIdx}" data-dishidx="${dishIdx}" data-ingidx="${ingIdx}">
+            <span class="ingredient-fields">
+              <input type="number" min="0" step="any" class="inline-edit" style="width:60px;"
+                data-edit="metricQuantity" data-timeslot="${slot.key}" data-menuidx="${menuIdx}"
+                data-dishidx="${dishIdx}" data-ingidx="${ingIdx}"
+                value="${isEmpty(ing.metricQuantity) ? '' : ing.metricQuantity}" placeholder="Cantidad" />
+              <span class="editable" data-edit="metricUnit" style="min-width:32px;max-width:80px;display:inline-block;"
+                tabindex="0" data-timeslot="${slot.key}" data-menuidx="${menuIdx}"
+                data-dishidx="${dishIdx}" data-ingidx="${ingIdx}">
                 ${isEmpty(ing.metricUnit) ? '[Unidad]' : escapeHtml(ing.metricUnit)}
               </span>
-            </span>
-            <span>
-              <input type="text" class="inline-edit" style="width:60px;" data-edit="alternativeQuantity" data-timeslot="${slot.key}" data-menuidx="${menuIdx}" data-dishidx="${dishIdx}" data-ingidx="${ingIdx}" value="${isEmpty(ing.alternativeQuantity) ? '' : ing.alternativeQuantity}" placeholder="Alt. Cantidad" />
-              <span class="editable${isEmpty(ing.alternativeUnit) ? ' placeholder' : ''}" tabindex="0" data-edit="alternativeUnit" data-timeslot="${slot.key}" data-menuidx="${menuIdx}" data-dishidx="${dishIdx}" data-ingidx="${ingIdx}">
+              <input type="text" class="inline-edit" style="width:60px;"
+                data-edit="alternativeQuantity" data-timeslot="${slot.key}" data-menuidx="${menuIdx}"
+                data-dishidx="${dishIdx}" data-ingidx="${ingIdx}"
+                value="${isEmpty(ing.alternativeQuantity) ? '' : ing.alternativeQuantity}" placeholder="Alt. Cantidad" />
+              <span class="editable" data-edit="alternativeUnit" style="min-width:32px;max-width:80px;display:inline-block;"
+                tabindex="0" data-timeslot="${slot.key}" data-menuidx="${menuIdx}"
+                data-dishidx="${dishIdx}" data-ingidx="${ingIdx}">
                 ${isEmpty(ing.alternativeUnit) ? '[Alt. Unidad]' : escapeHtml(ing.alternativeUnit)}
               </span>
+              <button class="delete-btn" data-action="delete-ingredient" data-timeslot="${slot.key}"
+                data-menuidx="${menuIdx}" data-dishidx="${dishIdx}" data-ingidx="${ingIdx}"
+                title="Eliminar ingrediente">&#128465;</button>
             </span>
-            <button class="delete-btn" data-action="delete-ingredient" data-timeslot="${slot.key}" data-menuidx="${menuIdx}" data-dishidx="${dishIdx}" data-ingidx="${ingIdx}" title="Eliminar ingrediente">&#128465;</button>
           `;
+          // --- FIN NUEVO RENDER DE INGREDIENTE ---
           ul.appendChild(li);
         });
         dishDiv.appendChild(ul);
@@ -184,6 +199,16 @@ function handleInlineEdit(e) {
   input.type = 'text';
   input.value = isEmpty(value) || value.startsWith('[') ? '' : value;
   input.className = 'inline-edit';
+  // Si es nombre de ingrediente, plato o menú, dale la clase para que ocupe todo el ancho
+  if (editType === 'ingredientName') {
+    input.classList.add('ingredient-name');
+  }
+  if (editType === 'dishName') {
+    input.classList.add('dish-name');
+  }
+  if (editType === 'menuName') {
+    input.classList.add('menu-name');
+  }
   input.style.minWidth = '60px';
   input.addEventListener('blur', () => {
     saveInlineEdit(input, target, editType, timeslot, menuIdx, dishIdx, ingIdx);
