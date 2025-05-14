@@ -141,7 +141,7 @@ function renderPlan() {
                 data-edit="metricQuantity" data-timeslot="${slot.key}" data-menuidx="${menuIdx}"
                 data-dishidx="${dishIdx}" data-ingidx="${ingIdx}"
                 value="${isEmpty(ing.metricQuantity) ? '' : ing.metricQuantity}" placeholder="Cantidad" />
-              <span class="editable" data-edit="metricUnit" style="min-width:32px;max-width:80px;display:inline-block;"
+              <span class="editable" data-edit="metricUnit" style="min-width:32px;max-width:120px;display:inline-block;"
                 tabindex="0" data-timeslot="${slot.key}" data-menuidx="${menuIdx}"
                 data-dishidx="${dishIdx}" data-ingidx="${ingIdx}">
                 ${isEmpty(ing.metricUnit) ? '[Unidad]' : escapeHtml(ing.metricUnit)}
@@ -150,7 +150,7 @@ function renderPlan() {
                 data-edit="alternativeQuantity" data-timeslot="${slot.key}" data-menuidx="${menuIdx}"
                 data-dishidx="${dishIdx}" data-ingidx="${ingIdx}"
                 value="${isEmpty(ing.alternativeQuantity) ? '' : ing.alternativeQuantity}" placeholder="Alt. Cantidad" />
-              <span class="editable" data-edit="alternativeUnit" style="min-width:32px;max-width:80px;display:inline-block;"
+              <span class="editable" data-edit="alternativeUnit" style="min-width:32px;max-width:120px;display:inline-block;"
                 tabindex="0" data-timeslot="${slot.key}" data-menuidx="${menuIdx}"
                 data-dishidx="${dishIdx}" data-ingidx="${ingIdx}">
                 ${isEmpty(ing.alternativeUnit) ? '[Alt. Unidad]' : escapeHtml(ing.alternativeUnit)}
@@ -331,8 +331,9 @@ function handleDelete(e) {
   }
 }
 
-// --- Reordenamiento drag & drop ---
+// --- Reordenamiento drag & drop con feedback visual ---
 let dragSrc = null;
+let dragOverEl = null;
 function handleDragStart(e) {
   const el = e.target;
   dragSrc = el;
@@ -343,9 +344,19 @@ function handleDragStart(e) {
 function handleDragOver(e) {
   e.preventDefault();
   e.dataTransfer.dropEffect = 'move';
+  // Feedback visual: resalta el elemento sobre el que se va a soltar
+  const tgt = e.target.closest('.menu-option, .dish, .ingredient');
+  if (dragOverEl && dragOverEl !== tgt) {
+    dragOverEl.classList.remove('drag-over');
+  }
+  if (tgt && tgt !== dragSrc) {
+    tgt.classList.add('drag-over');
+    dragOverEl = tgt;
+  }
 }
 function handleDrop(e) {
   e.preventDefault();
+  if (dragOverEl) dragOverEl.classList.remove('drag-over');
   if (!dragSrc) return;
   const src = dragSrc;
   const tgt = e.target.closest('.menu-option, .dish, .ingredient');
@@ -386,10 +397,13 @@ function handleDrop(e) {
     }
   }
   dragSrc = null;
+  dragOverEl = null;
 }
 function handleDragEnd(e) {
   e.target.style.opacity = '';
+  if (dragOverEl) dragOverEl.classList.remove('drag-over');
   dragSrc = null;
+  dragOverEl = null;
 }
 
 // --- Carga de JSON con drag & drop y feedback ---

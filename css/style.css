@@ -128,22 +128,23 @@ main {
 
 .menu-option .editable,
 .menu-option h3 {
+  flex: 1 1 auto;
+  min-width: 0;
+  max-width: 100%;
   margin: 0 0 6px 0;
   color: #00e6d0;
   font-size: 1.1rem;
   font-weight: 600;
-  flex: 1 1 0;
-  min-width: 0;
-  max-width: 100%;
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
+  display: block;
 }
 
 .menu-option .inline-edit.menu-name {
   width: 100%;
   min-width: 0;
-  flex: 1 1 0;
+  flex: 1 1 auto;
   margin-right: 12px;
 }
 
@@ -174,22 +175,23 @@ main {
 
 .dish .editable,
 .dish h4 {
+  flex: 1 1 auto;
+  min-width: 0;
+  max-width: 100%;
   margin: 0 0 4px 0;
   color: #00bfae;
   font-size: 1rem;
   font-weight: 500;
-  flex: 1 1 0;
-  min-width: 0;
-  max-width: 100%;
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
+  display: block;
 }
 
 .dish .inline-edit.dish-name {
   width: 100%;
   min-width: 0;
-  flex: 1 1 0;
+  flex: 1 1 auto;
   margin-right: 12px;
 }
 
@@ -216,13 +218,14 @@ main {
 
 .ingredient .ingredient-name,
 .ingredient .inline-edit.ingredient-name {
-  flex: 1 1 0;
+  flex: 1 1 auto;
   min-width: 0;
   max-width: 100%;
   margin-right: 12px;
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
+  display: block;
 }
 
 .ingredient .inline-edit.ingredient-name:focus {
@@ -245,7 +248,7 @@ main {
 .ingredient .editable[data-edit="metricUnit"],
 .ingredient .editable[data-edit="alternativeUnit"] {
   min-width: 32px;
-  max-width: 80px;
+  max-width: 120px;
   display: inline-block;
   text-align: left;
   white-space: nowrap;
@@ -253,6 +256,7 @@ main {
   text-overflow: ellipsis;
   padding-left: 2px;
   padding-right: 2px;
+  flex-shrink: 1;
 }
 
 .ingredient .editable[data-edit="metricUnit"]:focus,
@@ -276,7 +280,7 @@ main {
 .ingredient input[type="text"].ingredient-name {
   width: 100%;
   min-width: 0;
-  flex: 1 1 0;
+  flex: 1 1 auto;
   margin-right: 12px;
 }
 
@@ -375,6 +379,16 @@ main {
   font-size: 1.1em;
   margin-right: 4px;
   user-select: none;
+}
+
+/* --- Feedback visual para drag & drop --- */
+.menu-option.drag-over,
+.dish.drag-over,
+.ingredient.drag-over {
+  outline: 2.5px solid #00bfae;
+  outline-offset: -2px;
+  background: #263238 !important;
+  z-index: 2;
 }
 
 @media (max-width: 700px) {
