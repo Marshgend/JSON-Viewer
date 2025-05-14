@@ -365,11 +365,40 @@ function handleDragEnd(e) {
   dragSrc = null;
 }
 
-// --- Carga de JSON con drag & drop ---
-function handleFileInput(e) {
-  const file = e.target.files[0];
-  if (!file) return;
-  readJsonFile(file);
+// --- Carga de JSON con drag & drop y feedback ---
+function setupDropZone() {
+  const dropZone = document.getElementById('dropZone');
+
+  // Prevenir comportamiento por defecto en toda la ventana
+  ['dragenter', 'dragover', 'dragleave', 'drop'].forEach(eventName => {
+    document.addEventListener(eventName, function(e) {
+      e.preventDefault();
+      e.stopPropagation();
+    });
+  });
+
+  // Feedback visual solo en el dropZone
+  dropZone.addEventListener('dragenter', function(e) {
+    dropZone.classList.add('dragover');
+  });
+  dropZone.addEventListener('dragover', function(e) {
+    dropZone.classList.add('dragover');
+  });
+  dropZone.addEventListener('dragleave', function(e) {
+    dropZone.classList.remove('dragover');
+  });
+  dropZone.addEventListener('drop', function(e) {
+    dropZone.classList.remove('dragover');
+    const files = e.dataTransfer.files;
+    if (files.length > 0 && (files[0].type === "application/json" || files[0].name.endsWith('.json'))) {
+      readJsonFile(files[0]);
+    } else {
+      showFeedback('Por favor, arrastra un archivo .json válido.', 'error', 4000);
+    }
+  });
+  dropZone.addEventListener('click', function() {
+    document.getElementById('jsonFile').click();
+  });
 }
 function readJsonFile(file) {
   const reader = new FileReader();
@@ -386,41 +415,6 @@ function readJsonFile(file) {
   };
   reader.readAsText(file, 'utf-8');
 }
-function setupDropZone() {
-  const dropZone = document.getElementById('dropZone');
-
-  // --- INICIO DEL BLOQUE NUEVO ---
-  // Prevenir comportamiento por defecto en toda la ventana
-  window.addEventListener('dragover', function(e) {
-    e.preventDefault();
-  });
-  window.addEventListener('drop', function(e) {
-    e.preventDefault();
-  });
-
-  dropZone.addEventListener('dragover', function(e) {
-    e.preventDefault();
-    dropZone.classList.add('dragover');
-  });
-  dropZone.addEventListener('dragleave', function(e) {
-    dropZone.classList.remove('dragover');
-  });
-  dropZone.addEventListener('drop', function(e) {
-    e.preventDefault();
-    dropZone.classList.remove('dragover');
-    const files = e.dataTransfer.files;
-    if (files.length > 0 && (files[0].type === "application/json" || files[0].name.endsWith('.json'))) {
-      readJsonFile(files[0]);
-    } else {
-      showFeedback('Por favor, arrastra un archivo .json válido.', 'error', 4000);
-    }
-  });
-  dropZone.addEventListener('click', function() {
-    document.getElementById('jsonFile').click();
-  });
-  // --- FIN DEL BLOQUE NUEVO ---
-}
-
 
 // --- Edición de ID del plan ---
 function handlePlanIdEdit(e) {
@@ -472,7 +466,11 @@ function setupEventDelegation() {
 
 // --- Inicialización ---
 document.addEventListener('DOMContentLoaded', () => {
-  document.getElementById('jsonFile').addEventListener('change', handleFileInput);
+  document.getElementById('jsonFile').addEventListener('change', function(e) {
+    if (e.target.files.length > 0) {
+      readJsonFile(e.target.files[0]);
+    }
+  });
   document.getElementById('planIdInput').addEventListener('input', handlePlanIdEdit);
   document.getElementById('downloadJsonButton').addEventListener('click', handleDownload);
   setupEventDelegation();

@@ -10,7 +10,6 @@
   <header>
     <h1>Editor de Plan Nutricional</h1>
     <div>
-      <label for="jsonFile">Cargar archivo JSON:</label>
       <input type="file" id="jsonFile" accept=".json" style="display:none;" />
       <div id="dropZone">Arrastra aquí tu archivo <b>.json</b> o haz clic para seleccionarlo</div>
     </div>
@@ -20,4 +19,12 @@
     </div>
     <div id="feedback" class="feedback"></div>
   </header>
-  <main 
+  <main id="planContainer">
+    <p>Carga un archivo JSON para comenzar.</p>
+  </main>
+  <footer>
+    <button id="downloadJsonButton">Descargar Plan (JSON)</button>
+  </footer>
+  <script src="js/main.js"></script>
+</body>
+</html>
