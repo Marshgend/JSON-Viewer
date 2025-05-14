@@ -54,7 +54,9 @@ function isEmpty(val) {
   return val === undefined || val === null || val === '';
 }
 function placeholder(val, ph) {
-  return isEmpty(val) ? `<span class="placeholder">${ph}</span>` : escapeHtml(val);
+  return isEmpty(val)
+    ? `<span class="placeholder">${ph}</span>`
+    : escapeHtml(val);
 }
 function focusAndSelect(el) {
   setTimeout(() => { el.focus(); el.select && el.select(); }, 0);
@@ -88,9 +90,9 @@ function renderPlan() {
       menuDiv.innerHTML = `
         <div class="menu-option-header">
           <span class="drag-handle" title="Arrastrar para reordenar">&#x2630;</span>
-          <h3 class="editable" tabindex="0" data-edit="menuName" data-timeslot="${slot.key}" data-menuidx="${menuIdx}">
-            ${placeholder(menuOption.menuName, '[Editar nombre de menú]')}
-          </h3>
+          <span class="editable${isEmpty(menuOption.menuName) ? ' placeholder' : ''}" tabindex="0" data-edit="menuName" data-timeslot="${slot.key}" data-menuidx="${menuIdx}">
+            ${isEmpty(menuOption.menuName) ? '[Editar nombre de menú]' : escapeHtml(menuOption.menuName)}
+          </span>
           <button class="add-btn" data-action="add-dish" data-timeslot="${slot.key}" data-menuidx="${menuIdx}" title="Añadir plato">+ Plato</button>
           <button class="delete-btn" data-action="delete-menu" data-timeslot="${slot.key}" data-menuidx="${menuIdx}" title="Eliminar opción de menú">&#128465;</button>
         </div>
@@ -106,9 +108,9 @@ function renderPlan() {
         dishDiv.innerHTML = `
           <div class="dish-header">
             <span class="drag-handle" title="Arrastrar para reordenar">&#x2630;</span>
-            <h4 class="editable" tabindex="0" data-edit="dishName" data-timeslot="${slot.key}" data-menuidx="${menuIdx}" data-dishidx="${dishIdx}">
-              ${placeholder(dish.name, '[Editar nombre de plato]')}
-            </h4>
+            <span class="editable${isEmpty(dish.name) ? ' placeholder' : ''}" tabindex="0" data-edit="dishName" data-timeslot="${slot.key}" data-menuidx="${menuIdx}" data-dishidx="${dishIdx}">
+              ${isEmpty(dish.name) ? '[Editar nombre de plato]' : escapeHtml(dish.name)}
+            </span>
             <button class="add-btn" data-action="add-ingredient" data-timeslot="${slot.key}" data-menuidx="${menuIdx}" data-dishidx="${dishIdx}" title="Añadir ingrediente">+ Ingrediente</button>
             <button class="delete-btn" data-action="delete-dish" data-timeslot="${slot.key}" data-menuidx="${menuIdx}" data-dishidx="${dishIdx}" title="Eliminar plato">&#128465;</button>
           </div>
@@ -127,19 +129,19 @@ function renderPlan() {
           // Nombre
           li.innerHTML = `
             <span class="drag-handle" title="Arrastrar para reordenar">&#x2630;</span>
-            <span class="editable ingredient-name" tabindex="0" data-edit="ingredientName" data-timeslot="${slot.key}" data-menuidx="${menuIdx}" data-dishidx="${dishIdx}" data-ingidx="${ingIdx}">
-              ${placeholder(ing.name, '[Ingrediente]')}
+            <span class="editable ingredient-name${isEmpty(ing.name) ? ' placeholder' : ''}" tabindex="0" data-edit="ingredientName" data-timeslot="${slot.key}" data-menuidx="${menuIdx}" data-dishidx="${dishIdx}" data-ingidx="${ingIdx}">
+              ${isEmpty(ing.name) ? '[Ingrediente]' : escapeHtml(ing.name)}
             </span>
             <span>
               <input type="number" min="0" step="any" class="inline-edit" style="width:60px;" data-edit="metricQuantity" data-timeslot="${slot.key}" data-menuidx="${menuIdx}" data-dishidx="${dishIdx}" data-ingidx="${ingIdx}" value="${isEmpty(ing.metricQuantity) ? '' : ing.metricQuantity}" placeholder="Cantidad" />
-              <span class="editable" tabindex="0" data-edit="metricUnit" data-timeslot="${slot.key}" data-menuidx="${menuIdx}" data-dishidx="${dishIdx}" data-ingidx="${ingIdx}">
-                ${placeholder(ing.metricUnit, '[Unidad]')}
+              <span class="editable${isEmpty(ing.metricUnit) ? ' placeholder' : ''}" tabindex="0" data-edit="metricUnit" data-timeslot="${slot.key}" data-menuidx="${menuIdx}" data-dishidx="${dishIdx}" data-ingidx="${ingIdx}">
+                ${isEmpty(ing.metricUnit) ? '[Unidad]' : escapeHtml(ing.metricUnit)}
               </span>
             </span>
             <span>
               <input type="text" class="inline-edit" style="width:60px;" data-edit="alternativeQuantity" data-timeslot="${slot.key}" data-menuidx="${menuIdx}" data-dishidx="${dishIdx}" data-ingidx="${ingIdx}" value="${isEmpty(ing.alternativeQuantity) ? '' : ing.alternativeQuantity}" placeholder="Alt. Cantidad" />
-              <span class="editable" tabindex="0" data-edit="alternativeUnit" data-timeslot="${slot.key}" data-menuidx="${menuIdx}" data-dishidx="${dishIdx}" data-ingidx="${ingIdx}">
-                ${placeholder(ing.alternativeUnit, '[Alt. Unidad]')}
+              <span class="editable${isEmpty(ing.alternativeUnit) ? ' placeholder' : ''}" tabindex="0" data-edit="alternativeUnit" data-timeslot="${slot.key}" data-menuidx="${menuIdx}" data-dishidx="${dishIdx}" data-ingidx="${ingIdx}">
+                ${isEmpty(ing.alternativeUnit) ? '[Alt. Unidad]' : escapeHtml(ing.alternativeUnit)}
               </span>
             </span>
             <button class="delete-btn" data-action="delete-ingredient" data-timeslot="${slot.key}" data-menuidx="${menuIdx}" data-dishidx="${dishIdx}" data-ingidx="${ingIdx}" title="Eliminar ingrediente">&#128465;</button>
@@ -371,23 +373,23 @@ function setupDropZone() {
 
   // Prevenir comportamiento por defecto en toda la ventana
   ['dragenter', 'dragover', 'dragleave', 'drop'].forEach(eventName => {
-    document.addEventListener(eventName, function(e) {
+    document.addEventListener(eventName, function (e) {
       e.preventDefault();
       e.stopPropagation();
     });
   });
 
   // Feedback visual solo en el dropZone
-  dropZone.addEventListener('dragenter', function(e) {
+  dropZone.addEventListener('dragenter', function (e) {
     dropZone.classList.add('dragover');
   });
-  dropZone.addEventListener('dragover', function(e) {
+  dropZone.addEventListener('dragover', function (e) {
     dropZone.classList.add('dragover');
   });
-  dropZone.addEventListener('dragleave', function(e) {
+  dropZone.addEventListener('dragleave', function (e) {
     dropZone.classList.remove('dragover');
   });
-  dropZone.addEventListener('drop', function(e) {
+  dropZone.addEventListener('drop', function (e) {
     dropZone.classList.remove('dragover');
     const files = e.dataTransfer.files;
     if (files.length > 0 && (files[0].type === "application/json" || files[0].name.endsWith('.json'))) {
@@ -396,13 +398,13 @@ function setupDropZone() {
       showFeedback('Por favor, arrastra un archivo .json válido.', 'error', 4000);
     }
   });
-  dropZone.addEventListener('click', function() {
+  dropZone.addEventListener('click', function () {
     document.getElementById('jsonFile').click();
   });
 }
 function readJsonFile(file) {
   const reader = new FileReader();
-  reader.onload = function(ev) {
+  reader.onload = function (ev) {
     try {
       const json = JSON.parse(ev.target.result);
       planData = deepClone(json);
@@ -440,19 +442,19 @@ function setupEventDelegation() {
   // Edición inline
   document.getElementById('planContainer').addEventListener('click', handleInlineEdit);
   // Inputs de cantidad/unidad
-  document.getElementById('planContainer').addEventListener('input', function(e) {
+  document.getElementById('planContainer').addEventListener('input', function (e) {
     if (e.target.matches('input[data-edit="metricQuantity"], input[data-edit="alternativeQuantity"]')) {
       handleInputChange(e);
     }
   });
   // Añadir
-  document.getElementById('planContainer').addEventListener('click', function(e) {
+  document.getElementById('planContainer').addEventListener('click', function (e) {
     if (e.target.classList.contains('add-btn')) {
       handleAdd(e);
     }
   });
   // Eliminar
-  document.getElementById('planContainer').addEventListener('click', function(e) {
+  document.getElementById('planContainer').addEventListener('click', function (e) {
     if (e.target.classList.contains('delete-btn')) {
       handleDelete(e);
     }
@@ -466,7 +468,7 @@ function setupEventDelegation() {
 
 // --- Inicialización ---
 document.addEventListener('DOMContentLoaded', () => {
-  document.getElementById('jsonFile').addEventListener('change', function(e) {
+  document.getElementById('jsonFile').addEventListener('change', function (e) {
     if (e.target.files.length > 0) {
       readJsonFile(e.target.files[0]);
     }
