@@ -115,6 +115,25 @@ function restoreActiveElementState() {
   }
 }
 
+// --- Función para determinar el tipo de unidad métrica ---
+function getMetricUnitType(unitStr) {
+  if (!unitStr) return 'gramos'; // Por defecto, gramos
+
+  // Convertir a minúsculas para comparación sin importar mayúsculas/minúsculas
+  const unit = String(unitStr).toLowerCase().trim();
+
+  // Comprobar si es exactamente "g" o "ml"
+  if (unit === 'g') return 'gramos';
+  if (unit === 'ml') return 'mililitros';
+
+  // Extender para aceptar variaciones
+  if (unit === 'gramos' || unit === 'gr' || unit === 'grs' || unit === 'gm') return 'gramos';
+  if (unit === 'mililitros' || unit === 'mls' || unit === 'mlts') return 'mililitros';
+
+  // Si es otro valor, mantenerlo como está
+  return unitStr;
+}
+
 // --- Validación de fracciones y enteros ---
 function isValidFraction(str) {
   // Permite: 1, 1/2, 2 1/2, 1 3/4, 3/4, 2, etc.
@@ -204,15 +223,19 @@ function renderPlan() {
           const altQuantityWarning = hasAltUnit && !hasAltQuantity;
           const altUnitWarning = hasAltQuantity && !hasAltUnit;
 
+          // Determinar qué opción seleccionar en el dropdown basado en la unidad métrica
+          const metricUnitType = getMetricUnitType(ing.metricUnit);
+
           // --- RENDER DE INGREDIENTE ---
           let metricUnitHtml = '';
           if (!isEmpty(ing.metricQuantity)) {
             // Si hay cantidad, muestra dropdown
-            const unit = ing.metricUnit === 'mililitros' ? 'mililitros' : 'gramos';
             metricUnitHtml = `
               <select class="metric-unit-select${metricUnitWarning ? ' validation-warning' : ''}" data-edit="metricUnit" data-timeslot="${slot.key}" data-menuidx="${menuIdx}" data-dishidx="${dishIdx}" data-ingidx="${ingIdx}">
-                <option value="gramos" ${unit === 'gramos' ? 'selected' : ''}>gramos</option>
-                <option value="mililitros" ${unit === 'mililitros' ? 'selected' : ''}>mililitros</option>
+                <option value="gramos" ${metricUnitType === 'gramos' ? 'selected' : ''}>gramos</option>
+                <option value="mililitros" ${metricUnitType === 'mililitros' ? 'selected' : ''}>mililitros</option>
+                ${metricUnitType !== 'gramos' && metricUnitType !== 'mililitros' ?
+                `<option value="${escapeHtml(ing.metricUnit)}" selected>${escapeHtml(ing.metricUnit)}</option>` : ''}
               </select>
             `;
           } else {
@@ -381,7 +404,7 @@ function saveInlineEdit(input, origSpan, editType, timeslot, menuIdx, dishIdx, i
       if (val === '') {
         planData[timeslot][menuIdx].dishes[dishIdx].ingredients[ingIdx].metricUnit = '';
       } else if (isEmpty(planData[timeslot][menuIdx].dishes[dishIdx].ingredients[ingIdx].metricUnit)) {
-        planData[timeslot][menuIdx].dishes[dishIdx].ingredients[ingIdx].metricUnit = 'gramos';
+        planData[timeslot][menuIdx].dishes[dishIdx].ingredients[ingIdx].metricUnit = 'g';
       }
       changed = true;
       break;
@@ -416,7 +439,14 @@ document.addEventListener('change', function (e) {
     // Guardar estado del elemento activo antes de cambiar
     saveActiveElementState();
 
-    planData[timeslot][menuIdx].dishes[dishIdx].ingredients[ingIdx].metricUnit = select.value;
+    // Guardar el valor seleccionado - mantener formato corto para JSON
+    let selectedValue = select.value;
+    if (selectedValue === 'gramos') {
+      selectedValue = 'g';
+    } else if (selectedValue === 'mililitros') {
+      selectedValue = 'ml';
+    }
+    planData[timeslot][menuIdx].dishes[dishIdx].ingredients[ingIdx].metricUnit = selectedValue;
 
     renderPlan();
   }
@@ -453,7 +483,7 @@ document.addEventListener('input', function (e) {
         planData[timeslot][menuIdx].dishes[dishIdx].ingredients[ingIdx].metricUnit = '';
         renderPlan();
       } else if (val !== '' && isEmpty(planData[timeslot][menuIdx].dishes[dishIdx].ingredients[ingIdx].metricUnit)) {
-        planData[timeslot][menuIdx].dishes[dishIdx].ingredients[ingIdx].metricUnit = 'gramos';
+        planData[timeslot][menuIdx].dishes[dishIdx].ingredients[ingIdx].metricUnit = 'g';
         renderPlan();
       }
 
@@ -720,6 +750,10 @@ function readJsonFile(file) {
   reader.onload = function (ev) {
     try {
       const json = JSON.parse(ev.target.result);
+
+      // Procesar el JSON para normalizar unidades métricas
+      processMetricUnits(json);
+
       planData = deepClone(json);
       lastSavedJson = prettyJson(planData);
       renderPlan();
@@ -729,6 +763,32 @@ function readJsonFile(file) {
     }
   };
   reader.readAsText(file, 'utf-8');
+}
+
+// Función para procesar unidades métricas en el JSON cargado
+function processMetricUnits(json) {
+  // Procesar todos los tiempos de comida
+  timeSlots.forEach(slot => {
+    const menuOptions = json[slot.key] || [];
+
+    menuOptions.forEach(menuOption => {
+      const dishes = menuOption.dishes || [];
+
+      dishes.forEach(dish => {
+        const ingredients = dish.ingredients || [];
+
+        ingredients.forEach(ingredient => {
+          // Mantener la unidad métrica tal como viene, no la procesamos aquí
+          // El procesamiento se hará al renderizar en el dropdown
+
+          // Si no hay unidad pero hay cantidad, añadir 'g' por defecto
+          if (!isEmpty(ingredient.metricQuantity) && isEmpty(ingredient.metricUnit)) {
+            ingredient.metricUnit = 'g';
+          }
+        });
+      });
+    });
+  });
 }
 
 // --- Edición de ID del plan ---
