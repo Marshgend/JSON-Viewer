@@ -94,7 +94,7 @@ function renderPlan() {
             data-edit="menuName" data-timeslot="${slot.key}" data-menuidx="${menuIdx}">
             ${isEmpty(menuOption.menuName) ? '[Editar nombre de menú]' : escapeHtml(menuOption.menuName)}
           </span>
-          <button class="add-btn" data-action="add-dish" data-timeslot="${slot.key}" data-menuidx="${menuIdx}" title="Añadir plato">+ Plato</button>
+          <button class="add-btn" data-action="add-dish" data-timeslot="${slot.key}" data-menuidx="${menuIdx}" title="Añadir plato">Plato</button>
           <button class="delete-btn" data-action="delete-menu" data-timeslot="${slot.key}" data-menuidx="${menuIdx}" title="Eliminar opción de menú">&#128465;</button>
         </div>
       `;
@@ -113,7 +113,7 @@ function renderPlan() {
               data-edit="dishName" data-timeslot="${slot.key}" data-menuidx="${menuIdx}" data-dishidx="${dishIdx}">
               ${isEmpty(dish.name) ? '[Editar nombre de plato]' : escapeHtml(dish.name)}
             </span>
-            <button class="add-btn" data-action="add-ingredient" data-timeslot="${slot.key}" data-menuidx="${menuIdx}" data-dishidx="${dishIdx}" title="Añadir ingrediente">+ Ingrediente</button>
+            <button class="add-btn" data-action="add-ingredient" data-timeslot="${slot.key}" data-menuidx="${menuIdx}" data-dishidx="${dishIdx}" title="Añadir ingrediente">Ingrediente</button>
             <button class="delete-btn" data-action="delete-dish" data-timeslot="${slot.key}" data-menuidx="${menuIdx}" data-dishidx="${dishIdx}" title="Eliminar plato">&#128465;</button>
           </div>
         `;
@@ -176,7 +176,7 @@ function renderPlan() {
     // Botón añadir opción de menú
     const addMenuBtn = document.createElement('button');
     addMenuBtn.className = 'add-btn';
-    addMenuBtn.textContent = `+ Añadir opción de ${slot.label.toLowerCase()}`;
+    addMenuBtn.textContent = `Opción`;
     addMenuBtn.dataset.action = 'add-menu';
     addMenuBtn.dataset.timeslot = slot.key;
     section.appendChild(addMenuBtn);
@@ -332,6 +332,7 @@ function handleDelete(e) {
 }
 
 // --- Reordenamiento drag & drop con feedback visual ---
+// Solo permite resaltar el tipo correcto
 let dragSrc = null;
 let dragOverEl = null;
 function handleDragStart(e) {
@@ -344,14 +345,25 @@ function handleDragStart(e) {
 function handleDragOver(e) {
   e.preventDefault();
   e.dataTransfer.dropEffect = 'move';
-  // Feedback visual: resalta el elemento sobre el que se va a soltar
+  // Feedback visual: resalta solo el tipo correcto
+  const src = dragSrc;
   const tgt = e.target.closest('.menu-option, .dish, .ingredient');
   if (dragOverEl && dragOverEl !== tgt) {
     dragOverEl.classList.remove('drag-over');
   }
-  if (tgt && tgt !== dragSrc) {
-    tgt.classList.add('drag-over');
-    dragOverEl = tgt;
+  if (tgt && tgt !== src) {
+    // Solo resalta si el tipo coincide
+    if (
+      (src.classList.contains('menu-option') && tgt.classList.contains('menu-option')) ||
+      (src.classList.contains('dish') && tgt.classList.contains('dish')) ||
+      (src.classList.contains('ingredient') && tgt.classList.contains('ingredient'))
+    ) {
+      tgt.classList.add('drag-over');
+      dragOverEl = tgt;
+    } else if (dragOverEl) {
+      dragOverEl.classList.remove('drag-over');
+      dragOverEl = null;
+    }
   }
 }
 function handleDrop(e) {
@@ -361,7 +373,7 @@ function handleDrop(e) {
   const src = dragSrc;
   const tgt = e.target.closest('.menu-option, .dish, .ingredient');
   if (!tgt || src === tgt) return;
-  // Determinar tipo y reordenar en planData
+  // Solo permite soltar en el mismo tipo
   if (src.classList.contains('menu-option') && tgt.classList.contains('menu-option')) {
     const timeslot = src.dataset.timeslot;
     const srcIdx = +src.dataset.menuidx;
