@@ -1,0 +1,23 @@
+﻿<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>Editor de Plan Nutricional</title>
+  <link rel="stylesheet" href="css/style.css" />
+</head>
+<body>
+  <header>
+    <h1>Editor de Plan Nutricional</h1>
+    <div>
+      <label for="jsonFile">Cargar archivo JSON:</label>
+      <input type="file" id="jsonFile" accept=".json" style="display:none;" />
+      <div id="dropZone">Arrastra aquí tu archivo <b>.json</b> o haz clic para seleccionarlo</div>
+    </div>
+    <div style="margin-top:10px;">
+      <label for="planIdInput">ID del Plan:</label>
+      <input type="text" id="planIdInput" placeholder="Ej: menu_001" />
+    </div>
+    <div id="feedback" class="feedback"></div>
+  </header>
+  <main 
