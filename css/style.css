@@ -47,10 +47,17 @@ label {
   color: #fff;
 }
 
+#id-container {
+  display: flex;
+  align-items: center;
+  margin-bottom: 24px;
+}
+
 #planIdInput {
   margin-top: 4px;
   margin-bottom: 0;
-  width: 250px;
+  margin-left: 8px;
+  width: 200px;
   font-size: 1rem;
   background: #23272b;
   color: #e0e0e0;
@@ -66,14 +73,16 @@ main {
 }
 
 .feedback {
-  margin: 12px 0;
-  padding: 10px 16px;
+  padding: 8px 16px;
   border-radius: 6px;
   font-size: 1rem;
   background: #2d2f36;
   color: #00bfae;
   border: 1px solid #00bfae;
   display: none;
+  margin-left: 16px;
+  max-width: 400px;
+  flex-grow: 1;
 }
 
 .feedback.error {
@@ -92,9 +101,13 @@ main {
   border: none;
 }
 
+/* Colores por tiempo de comida */
+.time-slot h2 {
+  color: #9febe3;
+}
+
 .time-slot h2 {
   margin-top: 0;
-  color: #00bfae;
   font-size: 1.3rem;
   margin-bottom: 22px;
   letter-spacing: 0.5px;
@@ -130,13 +143,17 @@ main {
   margin-left: 8px;
 }
 
+/* Colores distintos para menús según tiempo de comida */
+.time-slot .menu-option .editable {
+  color: #82cec6
+}
+
 .menu-option .editable,
 .menu-option h3 {
   flex: 1 1 auto;
   min-width: 0;
   max-width: 100%;
   margin: 0 0 6px 0;
-  color: #00e6d0;
   font-size: 1.1rem;
   font-weight: 600;
   white-space: nowrap;
@@ -182,13 +199,17 @@ main {
   margin-left: 8px;
 }
 
+/* Colores distintos para platos según tiempo de comida */
+.time-slot .dish .editable {
+  color: #00bfae;
+}
+
 .dish .editable,
 .dish h4 {
   flex: 1 1 auto;
   min-width: 0;
   max-width: 100%;
   margin: 0 0 4px 0;
-  color: #00bfae;
   font-size: 1rem;
   font-weight: 500;
   white-space: nowrap;
@@ -278,6 +299,11 @@ main {
   box-sizing: border-box;
 }
 
+/* Colores distintos para ingredientes según tiempo de comida */
+.time-slot .ingredient .editable.ingredient-name {
+  color: #cecece;
+}
+
 .ingredient .editable[data-edit="metricUnit"].placeholder,
 .ingredient .editable[data-edit="alternativeUnit"].placeholder {
   color: #888 !important;
@@ -333,7 +359,7 @@ main {
 
 .editable.validation-warning {
   border-bottom: 1px dashed rgba(255, 82, 82, 0.9) !important;
-  background-color: rgba(255, 82, 82, 0.18) !important;
+  background-color: rgba(255, 82, 82, 0.15) !important;
 }
 
 .ingredient input[type="number"]::placeholder,
@@ -365,7 +391,7 @@ main {
   font-size: 0.98rem;
   font-family: inherit;
   margin-right: 2px;
-  min-width: 100px;
+  min-width: 80px;
   max-width: 120px;
   appearance: none;
   -webkit-appearance: none;
@@ -384,7 +410,7 @@ main {
 
 .metric-unit-select.validation-warning {
   border-color: rgba(255, 82, 82, 0.8) !important;
-  background-color: rgba(255, 82, 82, 0.18) !important;
+  background-color: rgba(255, 82, 82, 0.15) !important;
 }
 
 .metric-unit-select option {
@@ -583,6 +609,16 @@ main {
   .ingredient input,
   .ingredient .editable {
     min-width: 60px;
+  }
+
+  #id-container {
+    flex-direction: column;
+    align-items: flex-start;
+  }
+
+  .feedback {
+    margin-left: 0;
+    margin-top: 8px;
   }
 }
 

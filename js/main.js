@@ -1,6 +1,7 @@
 ﻿// --- Estado global del plan ---
 let planData = null;
 let lastSavedJson = '';
+let currentFileName = '';
 const timeSlots = [
   { key: 'breakfast', label: 'Desayuno' },
   { key: 'snack1', label: 'Colación 1' },
@@ -115,29 +116,27 @@ function restoreActiveElementState() {
   }
 }
 
-// --- Función para determinar el tipo de unidad métrica ---
-function getMetricUnitType(unitStr) {
-  if (!unitStr) return 'gramos'; // Por defecto, gramos
-
-  // Convertir a minúsculas para comparación sin importar mayúsculas/minúsculas
-  const unit = String(unitStr).toLowerCase().trim();
-
-  // Comprobar si es exactamente "g" o "ml"
-  if (unit === 'g') return 'gramos';
-  if (unit === 'ml') return 'mililitros';
-
-  // Extender para aceptar variaciones
-  if (unit === 'gramos' || unit === 'gr' || unit === 'grs' || unit === 'gm') return 'gramos';
-  if (unit === 'mililitros' || unit === 'mls' || unit === 'mlts') return 'mililitros';
-
-  // Si es otro valor, mantenerlo como está
-  return unitStr;
-}
-
 // --- Validación de fracciones y enteros ---
 function isValidFraction(str) {
   // Permite: 1, 1/2, 2 1/2, 1 3/4, 3/4, 2, etc.
   return /^(\d+\s+)?\d+\/\d+$/.test(str.trim()) || /^\d+$/.test(str.trim());
+}
+
+// --- Detectar unidad métrica a partir de texto ---
+function detectMetricUnit(unitStr) {
+  if (!unitStr) return '';
+
+  // Convertir a minúsculas y eliminar espacios
+  const unit = unitStr.toLowerCase().trim();
+
+  // Detectar "g" solo como gramos
+  if (unit === 'g') return 'gramos';
+
+  // Detectar "ml" como mililitros
+  if (unit === 'ml') return 'mililitros';
+
+  // Mantener el valor original si no coincide con estos patrones
+  return unitStr;
 }
 
 // --- Renderizado principal ---
@@ -223,21 +222,35 @@ function renderPlan() {
           const altQuantityWarning = hasAltUnit && !hasAltQuantity;
           const altUnitWarning = hasAltQuantity && !hasAltUnit;
 
-          // Determinar qué opción seleccionar en el dropdown basado en la unidad métrica
-          const metricUnitType = getMetricUnitType(ing.metricUnit);
-
           // --- RENDER DE INGREDIENTE ---
           let metricUnitHtml = '';
           if (!isEmpty(ing.metricQuantity)) {
-            // Si hay cantidad, muestra dropdown
-            metricUnitHtml = `
-              <select class="metric-unit-select${metricUnitWarning ? ' validation-warning' : ''}" data-edit="metricUnit" data-timeslot="${slot.key}" data-menuidx="${menuIdx}" data-dishidx="${dishIdx}" data-ingidx="${ingIdx}">
-                <option value="gramos" ${metricUnitType === 'gramos' ? 'selected' : ''}>gramos</option>
-                <option value="mililitros" ${metricUnitType === 'mililitros' ? 'selected' : ''}>mililitros</option>
-                ${metricUnitType !== 'gramos' && metricUnitType !== 'mililitros' ?
-                `<option value="${escapeHtml(ing.metricUnit)}" selected>${escapeHtml(ing.metricUnit)}</option>` : ''}
-              </select>
-            `;
+            // Si hay cantidad, muestra dropdown con las opciones correctas
+            const unit = ing.metricUnit;
+
+            // Determinar si es un valor estándar o uno personalizado
+            const isGramos = unit === 'gramos' || unit === 'g';
+            const isMililitros = unit === 'mililitros' || unit === 'ml';
+            const isCustomUnit = !isGramos && !isMililitros && !isEmpty(unit);
+
+            if (isCustomUnit) {
+              // Si es una unidad personalizada, mostrarla como opción
+              metricUnitHtml = `
+                <select class="metric-unit-select${metricUnitWarning ? ' validation-warning' : ''}" data-edit="metricUnit" data-timeslot="${slot.key}" data-menuidx="${menuIdx}" data-dishidx="${dishIdx}" data-ingidx="${ingIdx}">
+                  <option value="gramos" ${isGramos ? 'selected' : ''}>gramos</option>
+                  <option value="mililitros" ${isMililitros ? 'selected' : ''}>mililitros</option>
+                  <option value="${escapeHtml(unit)}" selected>${escapeHtml(unit)}</option>
+                </select>
+              `;
+            } else {
+              // Si es gramos o mililitros, solo mostrar las opciones estándar
+              metricUnitHtml = `
+                <select class="metric-unit-select${metricUnitWarning ? ' validation-warning' : ''}" data-edit="metricUnit" data-timeslot="${slot.key}" data-menuidx="${menuIdx}" data-dishidx="${dishIdx}" data-ingidx="${ingIdx}">
+                  <option value="gramos" ${isGramos ? 'selected' : ''}>gramos</option>
+                  <option value="mililitros" ${isMililitros ? 'selected' : ''}>mililitros</option>
+                </select>
+              `;
+            }
           } else {
             // Si no hay cantidad, muestra placeholder
             metricUnitHtml = `
@@ -404,7 +417,7 @@ function saveInlineEdit(input, origSpan, editType, timeslot, menuIdx, dishIdx, i
       if (val === '') {
         planData[timeslot][menuIdx].dishes[dishIdx].ingredients[ingIdx].metricUnit = '';
       } else if (isEmpty(planData[timeslot][menuIdx].dishes[dishIdx].ingredients[ingIdx].metricUnit)) {
-        planData[timeslot][menuIdx].dishes[dishIdx].ingredients[ingIdx].metricUnit = 'g';
+        planData[timeslot][menuIdx].dishes[dishIdx].ingredients[ingIdx].metricUnit = 'gramos';
       }
       changed = true;
       break;
@@ -439,14 +452,7 @@ document.addEventListener('change', function (e) {
     // Guardar estado del elemento activo antes de cambiar
     saveActiveElementState();
 
-    // Guardar el valor seleccionado - mantener formato corto para JSON
-    let selectedValue = select.value;
-    if (selectedValue === 'gramos') {
-      selectedValue = 'g';
-    } else if (selectedValue === 'mililitros') {
-      selectedValue = 'ml';
-    }
-    planData[timeslot][menuIdx].dishes[dishIdx].ingredients[ingIdx].metricUnit = selectedValue;
+    planData[timeslot][menuIdx].dishes[dishIdx].ingredients[ingIdx].metricUnit = select.value;
 
     renderPlan();
   }
@@ -483,7 +489,7 @@ document.addEventListener('input', function (e) {
         planData[timeslot][menuIdx].dishes[dishIdx].ingredients[ingIdx].metricUnit = '';
         renderPlan();
       } else if (val !== '' && isEmpty(planData[timeslot][menuIdx].dishes[dishIdx].ingredients[ingIdx].metricUnit)) {
-        planData[timeslot][menuIdx].dishes[dishIdx].ingredients[ingIdx].metricUnit = 'g';
+        planData[timeslot][menuIdx].dishes[dishIdx].ingredients[ingIdx].metricUnit = 'gramos';
         renderPlan();
       }
 
@@ -745,17 +751,24 @@ function setupDropZone() {
     document.getElementById('jsonFile').click();
   });
 }
+
 function readJsonFile(file) {
   const reader = new FileReader();
   reader.onload = function (ev) {
     try {
       const json = JSON.parse(ev.target.result);
 
-      // Procesar el JSON para normalizar unidades métricas
-      processMetricUnits(json);
+      // Normalizar las unidades métricas (g -> gramos, ml -> mililitros)
+      normalizeMetricUnits(json);
 
       planData = deepClone(json);
       lastSavedJson = prettyJson(planData);
+
+      // Usar el nombre del archivo como ID del plan
+      const filename = file.name.replace(/\.json$/, '');
+      currentFileName = filename;
+      planData.id = filename;
+
       renderPlan();
       showFeedback('JSON cargado correctamente.', 'info');
     } catch (err) {
@@ -765,29 +778,32 @@ function readJsonFile(file) {
   reader.readAsText(file, 'utf-8');
 }
 
-// Función para procesar unidades métricas en el JSON cargado
-function processMetricUnits(json) {
-  // Procesar todos los tiempos de comida
+// Función para normalizar unidades métricas
+function normalizeMetricUnits(json) {
+  // Recorrer todas las comidas
   timeSlots.forEach(slot => {
-    const menuOptions = json[slot.key] || [];
-
-    menuOptions.forEach(menuOption => {
-      const dishes = menuOption.dishes || [];
-
-      dishes.forEach(dish => {
-        const ingredients = dish.ingredients || [];
-
-        ingredients.forEach(ingredient => {
-          // Mantener la unidad métrica tal como viene, no la procesamos aquí
-          // El procesamiento se hará al renderizar en el dropdown
-
-          // Si no hay unidad pero hay cantidad, añadir 'g' por defecto
-          if (!isEmpty(ingredient.metricQuantity) && isEmpty(ingredient.metricUnit)) {
-            ingredient.metricUnit = 'g';
-          }
-        });
+    if (json[slot.key]) {
+      json[slot.key].forEach(menu => {
+        if (menu.dishes) {
+          menu.dishes.forEach(dish => {
+            if (dish.ingredients) {
+              dish.ingredients.forEach(ing => {
+                // Normalizar unidades métricas: g -> gramos, ml -> mililitros
+                if (ing.metricUnit) {
+                  const unit = ing.metricUnit.toLowerCase().trim();
+                  if (unit === 'g') {
+                    ing.metricUnit = 'gramos';
+                  } else if (unit === 'ml') {
+                    ing.metricUnit = 'mililitros';
+                  }
+                  // Otras unidades se mantienen sin cambios
+                }
+              });
+            }
+          });
+        }
       });
-    });
+    }
   });
 }
 
@@ -805,7 +821,15 @@ function handleDownload() {
   }
   // Reconstruir el JSON (ya está en planData)
   const jsonStr = prettyJson(planData);
-  const filename = (planData.id ? planData.id : 'plan_nutricional') + '.json';
+  let filename = '';
+
+  // Usar el nombre de archivo original si está disponible, sino usar el ID del plan
+  if (currentFileName) {
+    filename = currentFileName + '.json';
+  } else {
+    filename = (planData.id ? planData.id : 'plan_nutricional') + '.json';
+  }
+
   download(filename, jsonStr);
   showFeedback('Plan descargado.', 'info', 2000);
 }
@@ -836,6 +860,30 @@ function setupEventDelegation() {
 
 // --- Inicialización ---
 document.addEventListener('DOMContentLoaded', () => {
+  // Crear el contenedor para el feedback al lado del input de ID
+  const header = document.querySelector('header');
+  const labelAndInput = document.createElement('div');
+  labelAndInput.id = 'id-container';
+
+  // Mover elementos existentes
+  const label = document.querySelector('label[for="planIdInput"]');
+  const input = document.getElementById('planIdInput');
+  const feedback = document.getElementById('feedback');
+
+  // Quitar estos elementos de su ubicación actual
+  if (label) label.parentElement.removeChild(label);
+  if (input) input.parentElement.removeChild(input);
+  if (feedback) feedback.parentElement.removeChild(feedback);
+
+  // Añadirlos al nuevo contenedor
+  labelAndInput.appendChild(label);
+  labelAndInput.appendChild(input);
+  labelAndInput.appendChild(feedback);
+
+  // Insertar el nuevo contenedor al principio del header
+  header.insertBefore(labelAndInput, header.firstChild);
+
+  // Inicializar eventos
   document.getElementById('jsonFile').addEventListener('change', function (e) {
     if (e.target.files.length > 0) {
       readJsonFile(e.target.files[0]);
