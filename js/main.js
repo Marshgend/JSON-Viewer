@@ -9,6 +9,11 @@ const timeSlots = [
   { key: 'dinner', label: 'Cena' }
 ];
 
+// Nuevo estado para mantener seguimiento del foco
+let activeElement = null;
+let activeElementSelectionStart = 0;
+let activeElementSelectionEnd = 0;
+
 // --- Utilidades ---
 function showFeedback(msg, type = 'info', timeout = 3000) {
   const fb = document.getElementById('feedback');
@@ -17,12 +22,15 @@ function showFeedback(msg, type = 'info', timeout = 3000) {
   fb.style.display = 'block';
   if (timeout) setTimeout(() => { fb.style.display = 'none'; }, timeout);
 }
+
 function clearFeedback() {
   document.getElementById('feedback').style.display = 'none';
 }
+
 function deepClone(obj) {
   return JSON.parse(JSON.stringify(obj));
 }
+
 function escapeHtml(str) {
   return String(str)
     .replace(/&/g, "&amp;")
@@ -31,9 +39,11 @@ function escapeHtml(str) {
     .replace(/"/g, "&quot;")
     .replace(/'/g, "&#039;");
 }
+
 function prettyJson(obj) {
   return JSON.stringify(obj, null, 2);
 }
+
 function download(filename, text) {
   const blob = new Blob([text], { type: "application/json;charset=utf-8" });
   const link = document.createElement("a");
@@ -46,20 +56,63 @@ function download(filename, text) {
     URL.revokeObjectURL(link.href);
   }, 100);
 }
+
 function getTimeSlotLabel(key) {
   const slot = timeSlots.find(s => s.key === key);
   return slot ? slot.label : key;
 }
+
 function isEmpty(val) {
   return val === undefined || val === null || val === '';
 }
+
 function placeholder(val, ph) {
   return isEmpty(val)
     ? `<span class="placeholder">${ph}</span>`
     : escapeHtml(val);
 }
-function focusAndSelect(el) {
-  setTimeout(() => { el.focus(); el.select && el.select(); }, 0);
+
+// Función para preservar el foco antes de renderizar
+function saveActiveElementState() {
+  activeElement = document.activeElement;
+  if (activeElement && (activeElement.tagName === 'INPUT' || activeElement.tagName === 'SELECT')) {
+    // Guardar información sobre el elemento activo
+    const timeslot = activeElement.dataset.timeslot;
+    const menuidx = activeElement.dataset.menuidx;
+    const dishidx = activeElement.dataset.dishidx;
+    const ingidx = activeElement.dataset.ingidx;
+    const editType = activeElement.dataset.edit;
+
+    // Guardar la posición del cursor
+    if (activeElement.selectionStart !== undefined) {
+      activeElementSelectionStart = activeElement.selectionStart;
+      activeElementSelectionEnd = activeElement.selectionEnd;
+    }
+
+    // Construir un selector que identifique únicamente este elemento
+    activeElement.uniqueSelector = `[data-edit="${editType}"][data-timeslot="${timeslot}"]` +
+      (menuidx !== undefined ? `[data-menuidx="${menuidx}"]` : '') +
+      (dishidx !== undefined ? `[data-dishidx="${dishidx}"]` : '') +
+      (ingidx !== undefined ? `[data-ingidx="${ingidx}"]` : '');
+  }
+}
+
+// Función para restaurar el foco después de renderizar
+function restoreActiveElementState() {
+  if (activeElement && activeElement.uniqueSelector) {
+    const newActiveElement = document.querySelector(activeElement.uniqueSelector);
+    if (newActiveElement) {
+      newActiveElement.focus();
+
+      // Restaurar la posición del cursor
+      if (newActiveElement.tagName === 'INPUT' && activeElementSelectionStart !== undefined) {
+        // Colocar el cursor al final
+        const valueLength = newActiveElement.value.length;
+        newActiveElement.setSelectionRange(valueLength, valueLength);
+      }
+    }
+    activeElement = null;
+  }
 }
 
 // --- Validación de fracciones y enteros ---
@@ -70,11 +123,14 @@ function isValidFraction(str) {
 
 // --- Renderizado principal ---
 function renderPlan() {
-  // Guardar posición de scroll antes de renderizar
+  // Guardar posición de scroll y estado del foco
   const scrollPos = {
     x: window.scrollX || window.pageXOffset,
     y: window.scrollY || window.pageYOffset
   };
+
+  // Guardar el estado del elemento activo
+  saveActiveElementState();
 
   const container = document.getElementById('planContainer');
   container.innerHTML = '';
@@ -169,7 +225,8 @@ function renderPlan() {
             `;
           }
 
-          // Unidad alternativa
+          // Unidad alternativa - siempre mostrarla como editable, independientemente
+          // del valor en cantidad alternativa
           let altUnitHtml = '';
           if (isEmpty(ing.alternativeUnit)) {
             altUnitHtml = `
@@ -231,9 +288,12 @@ function renderPlan() {
     container.appendChild(section);
   });
 
-  // Restaurar posición de scroll después de renderizar
+  // Restaurar posición de scroll
   setTimeout(() => {
     window.scrollTo(scrollPos.x, scrollPos.y);
+
+    // Restaurar el foco después de renderizar
+    restoreActiveElementState();
   }, 0);
 }
 
@@ -252,6 +312,14 @@ function handleInlineEdit(e) {
   input.type = 'text';
   input.value = isEmpty(value) || value.startsWith('[') ? '' : value;
   input.className = 'inline-edit';
+
+  // Añadir atributos data para poder encontrar este elemento después
+  input.dataset.edit = editType;
+  input.dataset.timeslot = timeslot;
+  if (menuIdx !== undefined) input.dataset.menuidx = menuIdx;
+  if (dishIdx !== undefined) input.dataset.dishidx = dishIdx;
+  if (ingIdx !== undefined) input.dataset.ingidx = ingIdx;
+
   // Si es nombre de ingrediente, plato o menú, dale la clase para que ocupe todo el ancho
   if (editType === 'ingredientName') {
     input.classList.add('ingredient-name');
@@ -262,6 +330,7 @@ function handleInlineEdit(e) {
   if (editType === 'menuName') {
     input.classList.add('menu-name');
   }
+
   input.style.minWidth = '60px';
   input.addEventListener('blur', () => {
     saveInlineEdit(input, target, editType, timeslot, menuIdx, dishIdx, ingIdx);
@@ -274,7 +343,10 @@ function handleInlineEdit(e) {
     }
   });
   target.replaceWith(input);
-  focusAndSelect(input);
+
+  // Enfocar y seleccionar todo el texto
+  input.focus();
+  input.select();
 }
 
 function saveInlineEdit(input, origSpan, editType, timeslot, menuIdx, dishIdx, ingIdx) {
@@ -287,6 +359,7 @@ function saveInlineEdit(input, origSpan, editType, timeslot, menuIdx, dishIdx, i
       return;
     }
   }
+
   // Actualizar en planData
   let changed = false;
   switch (editType) {
@@ -303,12 +376,6 @@ function saveInlineEdit(input, origSpan, editType, timeslot, menuIdx, dishIdx, i
       changed = true;
       break;
     case 'metricQuantity':
-      // Guardar posición de scroll antes de actualizar
-      const scrollPos = {
-        x: window.scrollX || window.pageXOffset,
-        y: window.scrollY || window.pageYOffset
-      };
-
       planData[timeslot][menuIdx].dishes[dishIdx].ingredients[ingIdx].metricQuantity = val;
       // Si se borra la cantidad, borra la unidad y actualiza de inmediato
       if (val === '') {
@@ -316,11 +383,8 @@ function saveInlineEdit(input, origSpan, editType, timeslot, menuIdx, dishIdx, i
       } else if (isEmpty(planData[timeslot][menuIdx].dishes[dishIdx].ingredients[ingIdx].metricUnit)) {
         planData[timeslot][menuIdx].dishes[dishIdx].ingredients[ingIdx].metricUnit = 'gramos';
       }
-
-      // Renderizar y restaurar posición de scroll
-      renderPlan();
-      window.scrollTo(scrollPos.x, scrollPos.y);
-      return; // No render dos veces
+      changed = true;
+      break;
     case 'alternativeQuantity':
       planData[timeslot][menuIdx].dishes[dishIdx].ingredients[ingIdx].alternativeQuantity = val;
       changed = true;
@@ -334,6 +398,7 @@ function saveInlineEdit(input, origSpan, editType, timeslot, menuIdx, dishIdx, i
       changed = true;
       break;
   }
+
   if (changed) {
     renderPlan();
   }
@@ -342,66 +407,101 @@ function saveInlineEdit(input, origSpan, editType, timeslot, menuIdx, dishIdx, i
 // --- Manejo de dropdown de unidad métrica ---
 document.addEventListener('change', function (e) {
   if (e.target.classList.contains('metric-unit-select')) {
-    // Guardar posición de scroll
-    const scrollPos = {
-      x: window.scrollX || window.pageXOffset,
-      y: window.scrollY || window.pageYOffset
-    };
-
     const select = e.target;
     const timeslot = select.dataset.timeslot;
     const menuIdx = +select.dataset.menuidx;
     const dishIdx = +select.dataset.dishidx;
     const ingIdx = +select.dataset.ingidx;
+
+    // Guardar estado del elemento activo antes de cambiar
+    saveActiveElementState();
+
     planData[timeslot][menuIdx].dishes[dishIdx].ingredients[ingIdx].metricUnit = select.value;
 
-    // Renderizar y restaurar posición
     renderPlan();
-    window.scrollTo(scrollPos.x, scrollPos.y);
   }
 });
 
-// Edición de metricQuantity y alternativeQuantity (inputs directos)
-function handleInputChange(e) {
-  // Guardar posición de scroll
-  const scrollPos = {
-    x: window.scrollX || window.pageXOffset,
-    y: window.scrollY || window.pageYOffset
-  };
+// Manejo directo de inputs sin renderizar todo el plan
+document.addEventListener('input', function (e) {
+  if (e.target.matches('input[data-edit="metricQuantity"], input[data-edit="alternativeQuantity"]')) {
+    const input = e.target;
+    const editType = input.dataset.edit;
+    const timeslot = input.dataset.timeslot;
+    const menuIdx = +input.dataset.menuidx;
+    const dishIdx = +input.dataset.dishidx;
+    const ingIdx = +input.dataset.ingidx;
+    let val = input.value;
 
-  const input = e.target;
-  const editType = input.dataset.edit;
-  const timeslot = input.dataset.timeslot;
-  const menuIdx = +input.dataset.menuidx;
-  const dishIdx = +input.dataset.dishidx;
-  const ingIdx = +input.dataset.ingidx;
-  let val = input.value;
-  // Validación de fracciones y enteros
-  if ((editType === 'metricQuantity' || editType === 'alternativeQuantity') && val !== '' && !isValidFraction(val)) {
-    input.setCustomValidity('Solo se permiten números enteros o fracciones tipo 1/2, 2 1/2, etc.');
-    input.reportValidity();
-    return;
-  } else {
-    input.setCustomValidity('');
-  }
-  if (editType === 'metricQuantity') {
-    planData[timeslot][menuIdx].dishes[dishIdx].ingredients[ingIdx].metricQuantity = val;
-    // Si se borra la cantidad, borra la unidad y actualiza de inmediato
-    if (val === '') {
-      planData[timeslot][menuIdx].dishes[dishIdx].ingredients[ingIdx].metricUnit = '';
-      renderPlan();
-      window.scrollTo(scrollPos.x, scrollPos.y);
-    } else if (isEmpty(planData[timeslot][menuIdx].dishes[dishIdx].ingredients[ingIdx].metricUnit)) {
-      planData[timeslot][menuIdx].dishes[dishIdx].ingredients[ingIdx].metricUnit = 'gramos';
-      renderPlan();
-      window.scrollTo(scrollPos.x, scrollPos.y);
+    // Validación de fracciones y enteros
+    if ((editType === 'metricQuantity' || editType === 'alternativeQuantity') &&
+      val !== '' && !isValidFraction(val)) {
+      input.setCustomValidity('Solo se permiten números enteros o fracciones tipo 1/2, 2 1/2, etc.');
+      input.reportValidity();
+      return;
+    } else {
+      input.setCustomValidity('');
     }
-  } else if (editType === 'alternativeQuantity') {
-    planData[timeslot][menuIdx].dishes[dishIdx].ingredients[ingIdx].alternativeQuantity = val;
-    renderPlan();
-    window.scrollTo(scrollPos.x, scrollPos.y);
+
+    // Actualizar el modelo de datos
+    if (editType === 'metricQuantity') {
+      planData[timeslot][menuIdx].dishes[dishIdx].ingredients[ingIdx].metricQuantity = val;
+
+      // Si se borra la cantidad, hay que borrar la unidad y actualizar
+      // Si se añade una cantidad sin unidad, hay que asignar una unidad por defecto
+      if (val === '' && !isEmpty(planData[timeslot][menuIdx].dishes[dishIdx].ingredients[ingIdx].metricUnit)) {
+        planData[timeslot][menuIdx].dishes[dishIdx].ingredients[ingIdx].metricUnit = '';
+        renderPlan();
+      } else if (val !== '' && isEmpty(planData[timeslot][menuIdx].dishes[dishIdx].ingredients[ingIdx].metricUnit)) {
+        planData[timeslot][menuIdx].dishes[dishIdx].ingredients[ingIdx].metricUnit = 'gramos';
+        renderPlan();
+      }
+
+      // Aplicar advertencia visual si es necesario sin renderizar todo
+      const altUnitElement = document.querySelector(`[data-edit="alternativeUnit"][data-timeslot="${timeslot}"][data-menuidx="${menuIdx}"][data-dishidx="${dishIdx}"][data-ingidx="${ingIdx}"]`);
+      const altQuantityElement = document.querySelector(`[data-edit="alternativeQuantity"][data-timeslot="${timeslot}"][data-menuidx="${menuIdx}"][data-dishidx="${dishIdx}"][data-ingidx="${ingIdx}"]`);
+
+      if (altUnitElement && altQuantityElement) {
+        const hasAltQuantity = !isEmpty(altQuantityElement.value);
+        const hasAltUnit = !isEmpty(altUnitElement.textContent) && !altUnitElement.textContent.includes('[');
+
+        if (hasAltUnit && !hasAltQuantity) {
+          altQuantityElement.classList.add('validation-warning');
+        } else {
+          altQuantityElement.classList.remove('validation-warning');
+        }
+
+        if (hasAltQuantity && !hasAltUnit) {
+          altUnitElement.classList.add('validation-warning');
+        } else {
+          altUnitElement.classList.remove('validation-warning');
+        }
+      }
+
+    } else if (editType === 'alternativeQuantity') {
+      planData[timeslot][menuIdx].dishes[dishIdx].ingredients[ingIdx].alternativeQuantity = val;
+
+      // Aplicar advertencia visual si es necesario sin renderizar todo
+      const altUnitElement = document.querySelector(`[data-edit="alternativeUnit"][data-timeslot="${timeslot}"][data-menuidx="${menuIdx}"][data-dishidx="${dishIdx}"][data-ingidx="${ingIdx}"]`);
+
+      if (altUnitElement) {
+        const hasAltUnit = !isEmpty(altUnitElement.textContent) && !altUnitElement.textContent.includes('[');
+
+        if (val !== '' && !hasAltUnit) {
+          altUnitElement.classList.add('validation-warning');
+        } else {
+          altUnitElement.classList.remove('validation-warning');
+        }
+
+        if (val === '' && hasAltUnit) {
+          input.classList.add('validation-warning');
+        } else {
+          input.classList.remove('validation-warning');
+        }
+      }
+    }
   }
-}
+});
 
 // --- Añadir elementos ---
 function handleAdd(e) {
@@ -654,12 +754,7 @@ function handleDownload() {
 function setupEventDelegation() {
   // Edición inline
   document.getElementById('planContainer').addEventListener('click', handleInlineEdit);
-  // Inputs de cantidad/unidad
-  document.getElementById('planContainer').addEventListener('input', function (e) {
-    if (e.target.matches('input[data-edit="metricQuantity"], input[data-edit="alternativeQuantity"]')) {
-      handleInputChange(e);
-    }
-  });
+
   // Añadir
   document.getElementById('planContainer').addEventListener('click', function (e) {
     if (e.target.classList.contains('add-btn')) {

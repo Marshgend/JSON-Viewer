@@ -321,18 +321,19 @@ main {
   letter-spacing: 1px;
 }
 
-/* Nuevos estilos para validación */
+/* Nuevos estilos mejorados para validación */
 .validation-warning {
-  background-color: rgba(255, 82, 82, 0.05) !important;
-  border-color: rgba(255, 82, 82, 0.3) !important;
+  background-color: rgba(255, 82, 82, 0.12) !important;
+  border-color: rgba(255, 82, 82, 0.6) !important;
 }
 
 .validation-warning::placeholder {
-  color: rgba(255, 140, 140, 0.7) !important;
+  color: rgba(255, 140, 140, 0.8) !important;
 }
 
 .editable.validation-warning {
-  border-bottom: 1px dashed rgba(255, 82, 82, 0.5) !important;
+  border-bottom: 1px dashed rgba(255, 82, 82, 0.8) !important;
+  background-color: rgba(255, 82, 82, 0.08) !important;
 }
 
 .ingredient input[type="number"]::placeholder,
@@ -382,7 +383,8 @@ main {
 }
 
 .metric-unit-select.validation-warning {
-  border-color: rgba(255, 82, 82, 0.3) !important;
+  border-color: rgba(255, 82, 82, 0.6) !important;
+  background-color: rgba(255, 82, 82, 0.08) !important;
 }
 
 .metric-unit-select option {
