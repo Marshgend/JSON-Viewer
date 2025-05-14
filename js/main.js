@@ -62,6 +62,12 @@ function focusAndSelect(el) {
   setTimeout(() => { el.focus(); el.select && el.select(); }, 0);
 }
 
+// --- Validación de fracciones y enteros ---
+function isValidFraction(str) {
+  // Permite: 1, 1/2, 2 1/2, 1 3/4, 3/4, 2, etc.
+  return /^(\d+\s+)?\d+\/\d+$/.test(str.trim()) || /^\d+$/.test(str.trim());
+}
+
 // --- Renderizado principal ---
 function renderPlan() {
   const container = document.getElementById('planContainer');
@@ -91,11 +97,9 @@ function renderPlan() {
         <div class="menu-option-header">
           <span class="drag-handle" title="Arrastrar para reordenar">&#x2630;</span>
           <span class="editable menu-name${isEmpty(menuOption.menuName) ? ' placeholder' : ''}" tabindex="0"
-            data-edit="menuName" data-timeslot="${slot.key}" data-menuidx="${menuIdx}">
-            ${isEmpty(menuOption.menuName) ? '[Editar nombre de menú]' : escapeHtml(menuOption.menuName)}
-          </span>
+            data-edit="menuName" data-timeslot="${slot.key}" data-menuidx="${menuIdx}">${isEmpty(menuOption.menuName) ? '[Editar nombre de menú]' : escapeHtml(menuOption.menuName)}</span>
           <button class="add-btn" data-action="add-dish" data-timeslot="${slot.key}" data-menuidx="${menuIdx}" title="Añadir plato">Plato</button>
-          <button class="delete-btn" data-action="delete-menu" data-timeslot="${slot.key}" data-menuidx="${menuIdx}" title="Eliminar opción de menú">&#128465;</button>
+          <button class="delete-btn" data-action="delete-menu" data-timeslot="${slot.key}" data-menuidx="${menuIdx}" title="Eliminar opción de menú"></button>
         </div>
       `;
       // Platos
@@ -110,11 +114,9 @@ function renderPlan() {
           <div class="dish-header">
             <span class="drag-handle" title="Arrastrar para reordenar">&#x2630;</span>
             <span class="editable dish-name${isEmpty(dish.name) ? ' placeholder' : ''}" tabindex="0"
-              data-edit="dishName" data-timeslot="${slot.key}" data-menuidx="${menuIdx}" data-dishidx="${dishIdx}">
-              ${isEmpty(dish.name) ? '[Editar nombre de plato]' : escapeHtml(dish.name)}
-            </span>
+              data-edit="dishName" data-timeslot="${slot.key}" data-menuidx="${menuIdx}" data-dishidx="${dishIdx}">${isEmpty(dish.name) ? '[Editar nombre de plato]' : escapeHtml(dish.name)}</span>
             <button class="add-btn" data-action="add-ingredient" data-timeslot="${slot.key}" data-menuidx="${menuIdx}" data-dishidx="${dishIdx}" title="Añadir ingrediente">Ingrediente</button>
-            <button class="delete-btn" data-action="delete-dish" data-timeslot="${slot.key}" data-menuidx="${menuIdx}" data-dishidx="${dishIdx}" title="Eliminar plato">&#128465;</button>
+            <button class="delete-btn" data-action="delete-dish" data-timeslot="${slot.key}" data-menuidx="${menuIdx}" data-dishidx="${dishIdx}" title="Eliminar plato"></button>
           </div>
         `;
         // Ingredientes
@@ -128,7 +130,46 @@ function renderPlan() {
           li.dataset.dishidx = dishIdx;
           li.dataset.menuidx = menuIdx;
           li.dataset.timeslot = slot.key;
-          // --- NUEVO RENDER DE INGREDIENTE ---
+
+          // --- RENDER DE INGREDIENTE ---
+          let metricUnitHtml = '';
+          if (!isEmpty(ing.metricQuantity)) {
+            // Si hay cantidad, muestra dropdown
+            const unit = ing.metricUnit === 'mililitros' ? 'mililitros' : 'gramos';
+            metricUnitHtml = `
+              <select class="metric-unit-select" data-edit="metricUnit" data-timeslot="${slot.key}" data-menuidx="${menuIdx}" data-dishidx="${dishIdx}" data-ingidx="${ingIdx}">
+                <option value="gramos" ${unit === 'gramos' ? 'selected' : ''}>gramos</option>
+                <option value="mililitros" ${unit === 'mililitros' ? 'selected' : ''}>mililitros</option>
+              </select>
+            `;
+          } else {
+            // Si no hay cantidad, muestra placeholder
+            metricUnitHtml = `
+              <span class="editable placeholder" data-edit="metricUnit" tabindex="0"
+                data-timeslot="${slot.key}" data-menuidx="${menuIdx}" data-dishidx="${dishIdx}" data-ingidx="${ingIdx}">
+                [Unidad]
+              </span>
+            `;
+          }
+
+          // Unidad alternativa
+          let altUnitHtml = '';
+          if (isEmpty(ing.alternativeUnit)) {
+            altUnitHtml = `
+              <span class="editable placeholder" data-edit="alternativeUnit" tabindex="0"
+                data-timeslot="${slot.key}" data-menuidx="${menuIdx}" data-dishidx="${dishIdx}" data-ingidx="${ingIdx}">
+                [Alt. Unidad]
+              </span>
+            `;
+          } else {
+            altUnitHtml = `
+              <span class="editable" data-edit="alternativeUnit" tabindex="0"
+                data-timeslot="${slot.key}" data-menuidx="${menuIdx}" data-dishidx="${dishIdx}" data-ingidx="${ingIdx}">
+                ${escapeHtml(ing.alternativeUnit)}
+              </span>
+            `;
+          }
+
           li.innerHTML = `
             <span class="drag-handle" title="Arrastrar para reordenar">&#x2630;</span>
             <span class="editable ingredient-name${isEmpty(ing.name) ? ' placeholder' : ''}" tabindex="0"
@@ -137,30 +178,20 @@ function renderPlan() {
               ${isEmpty(ing.name) ? '[Ingrediente]' : escapeHtml(ing.name)}
             </span>
             <span class="ingredient-fields">
-              <input type="number" min="0" step="any" class="inline-edit" style="width:60px;"
-                data-edit="metricQuantity" data-timeslot="${slot.key}" data-menuidx="${menuIdx}"
-                data-dishidx="${dishIdx}" data-ingidx="${ingIdx}"
-                value="${isEmpty(ing.metricQuantity) ? '' : ing.metricQuantity}" placeholder="Cantidad" />
-              <span class="editable" data-edit="metricUnit" style="min-width:32px;max-width:120px;display:inline-block;"
-                tabindex="0" data-timeslot="${slot.key}" data-menuidx="${menuIdx}"
-                data-dishidx="${dishIdx}" data-ingidx="${ingIdx}">
-                ${isEmpty(ing.metricUnit) ? '[Unidad]' : escapeHtml(ing.metricUnit)}
-              </span>
-              <input type="text" class="inline-edit" style="width:60px;"
-                data-edit="alternativeQuantity" data-timeslot="${slot.key}" data-menuidx="${menuIdx}"
-                data-dishidx="${dishIdx}" data-ingidx="${ingIdx}"
-                value="${isEmpty(ing.alternativeQuantity) ? '' : ing.alternativeQuantity}" placeholder="Alt. Cantidad" />
-              <span class="editable" data-edit="alternativeUnit" style="min-width:32px;max-width:120px;display:inline-block;"
-                tabindex="0" data-timeslot="${slot.key}" data-menuidx="${menuIdx}"
-                data-dishidx="${dishIdx}" data-ingidx="${ingIdx}">
-                ${isEmpty(ing.alternativeUnit) ? '[Alt. Unidad]' : escapeHtml(ing.alternativeUnit)}
-              </span>
+              <input type="text" class="inline-edit" style="width:40px;" data-edit="metricQuantity"
+                data-timeslot="${slot.key}" data-menuidx="${menuIdx}" data-dishidx="${dishIdx}" data-ingidx="${ingIdx}"
+                value="${isEmpty(ing.metricQuantity) ? '' : ing.metricQuantity}" placeholder="X" />
+              ${metricUnitHtml}
+              <input type="text" class="inline-edit" style="width:90px;" data-edit="alternativeQuantity"
+                data-timeslot="${slot.key}" data-menuidx="${menuIdx}" data-dishidx="${dishIdx}" data-ingidx="${ingIdx}"
+                value="${isEmpty(ing.alternativeQuantity) ? '' : ing.alternativeQuantity}" placeholder="Y" />
+              ${altUnitHtml}
               <button class="delete-btn" data-action="delete-ingredient" data-timeslot="${slot.key}"
                 data-menuidx="${menuIdx}" data-dishidx="${dishIdx}" data-ingidx="${ingIdx}"
-                title="Eliminar ingrediente">&#128465;</button>
+                title="Eliminar ingrediente"></button>
             </span>
           `;
-          // --- FIN NUEVO RENDER DE INGREDIENTE ---
+          // --- FIN RENDER DE INGREDIENTE ---
           ul.appendChild(li);
         });
         dishDiv.appendChild(ul);
@@ -225,6 +256,14 @@ function handleInlineEdit(e) {
 }
 function saveInlineEdit(input, origSpan, editType, timeslot, menuIdx, dishIdx, ingIdx) {
   const val = input.value.trim();
+  // Validación de fracciones y enteros para cantidad y alternativa
+  if (editType === 'metricQuantity' || editType === 'alternativeQuantity') {
+    if (val !== '' && !isValidFraction(val)) {
+      showFeedback('Solo se permiten números enteros o fracciones tipo 1/2, 2 1/2, etc.', 'error', 3000);
+      input.focus();
+      return;
+    }
+  }
   // Actualizar en planData
   let changed = false;
   switch (editType) {
@@ -240,6 +279,20 @@ function saveInlineEdit(input, origSpan, editType, timeslot, menuIdx, dishIdx, i
       planData[timeslot][menuIdx].dishes[dishIdx].ingredients[ingIdx].name = val;
       changed = true;
       break;
+    case 'metricQuantity':
+      planData[timeslot][menuIdx].dishes[dishIdx].ingredients[ingIdx].metricQuantity = val;
+      // Si se borra la cantidad, borra la unidad y actualiza de inmediato
+      if (val === '') {
+        planData[timeslot][menuIdx].dishes[dishIdx].ingredients[ingIdx].metricUnit = '';
+      } else if (isEmpty(planData[timeslot][menuIdx].dishes[dishIdx].ingredients[ingIdx].metricUnit)) {
+        planData[timeslot][menuIdx].dishes[dishIdx].ingredients[ingIdx].metricUnit = 'gramos';
+      }
+      renderPlan(); // <-- ACTUALIZA INSTANTÁNEAMENTE AL BLUR
+      return; // No render dos veces
+    case 'alternativeQuantity':
+      planData[timeslot][menuIdx].dishes[dishIdx].ingredients[ingIdx].alternativeQuantity = val;
+      changed = true;
+      break;
     case 'metricUnit':
       planData[timeslot][menuIdx].dishes[dishIdx].ingredients[ingIdx].metricUnit = val;
       changed = true;
@@ -253,6 +306,20 @@ function saveInlineEdit(input, origSpan, editType, timeslot, menuIdx, dishIdx, i
     renderPlan();
   }
 }
+
+// --- Manejo de dropdown de unidad métrica ---
+document.addEventListener('change', function (e) {
+  if (e.target.classList.contains('metric-unit-select')) {
+    const select = e.target;
+    const timeslot = select.dataset.timeslot;
+    const menuIdx = +select.dataset.menuidx;
+    const dishIdx = +select.dataset.dishidx;
+    const ingIdx = +select.dataset.ingidx;
+    planData[timeslot][menuIdx].dishes[dishIdx].ingredients[ingIdx].metricUnit = select.value;
+    renderPlan();
+  }
+});
+
 // Edición de metricQuantity y alternativeQuantity (inputs directos)
 function handleInputChange(e) {
   const input = e.target;
@@ -262,8 +329,24 @@ function handleInputChange(e) {
   const dishIdx = +input.dataset.dishidx;
   const ingIdx = +input.dataset.ingidx;
   let val = input.value;
+  // Validación de fracciones y enteros
+  if ((editType === 'metricQuantity' || editType === 'alternativeQuantity') && val !== '' && !isValidFraction(val)) {
+    input.setCustomValidity('Solo se permiten números enteros o fracciones tipo 1/2, 2 1/2, etc.');
+    input.reportValidity();
+    return;
+  } else {
+    input.setCustomValidity('');
+  }
   if (editType === 'metricQuantity') {
-    planData[timeslot][menuIdx].dishes[dishIdx].ingredients[ingIdx].metricQuantity = val === '' ? '' : Number(val);
+    planData[timeslot][menuIdx].dishes[dishIdx].ingredients[ingIdx].metricQuantity = val;
+    // Si se borra la cantidad, borra la unidad y actualiza de inmediato
+    if (val === '') {
+      planData[timeslot][menuIdx].dishes[dishIdx].ingredients[ingIdx].metricUnit = '';
+      renderPlan(); // <-- ACTUALIZA INSTANTÁNEAMENTE
+    } else if (isEmpty(planData[timeslot][menuIdx].dishes[dishIdx].ingredients[ingIdx].metricUnit)) {
+      planData[timeslot][menuIdx].dishes[dishIdx].ingredients[ingIdx].metricUnit = 'gramos';
+      renderPlan(); // <-- ACTUALIZA INSTANTÁNEAMENTE AL AGREGAR
+    }
   } else if (editType === 'alternativeQuantity') {
     planData[timeslot][menuIdx].dishes[dishIdx].ingredients[ingIdx].alternativeQuantity = val;
   }
@@ -331,8 +414,7 @@ function handleDelete(e) {
   }
 }
 
-// --- Reordenamiento drag & drop con feedback visual ---
-// Solo permite resaltar el tipo correcto
+// --- Reordenamiento drag & drop con feedback visual y SWAP ---
 let dragSrc = null;
 let dragOverEl = null;
 function handleDragStart(e) {
@@ -373,15 +455,14 @@ function handleDrop(e) {
   const src = dragSrc;
   const tgt = e.target.closest('.menu-option, .dish, .ingredient');
   if (!tgt || src === tgt) return;
-  // Solo permite soltar en el mismo tipo
+  // Solo permite soltar en el mismo tipo y hace SWAP
   if (src.classList.contains('menu-option') && tgt.classList.contains('menu-option')) {
     const timeslot = src.dataset.timeslot;
     const srcIdx = +src.dataset.menuidx;
     const tgtIdx = +tgt.dataset.menuidx;
     if (srcIdx !== tgtIdx) {
       const arr = planData[timeslot];
-      const [item] = arr.splice(srcIdx, 1);
-      arr.splice(tgtIdx, 0, item);
+      [arr[srcIdx], arr[tgtIdx]] = [arr[tgtIdx], arr[srcIdx]];
       renderPlan();
     }
   } else if (src.classList.contains('dish') && tgt.classList.contains('dish')) {
@@ -391,8 +472,7 @@ function handleDrop(e) {
     const tgtIdx = +tgt.dataset.dishidx;
     if (srcIdx !== tgtIdx) {
       const arr = planData[timeslot][menuIdx].dishes;
-      const [item] = arr.splice(srcIdx, 1);
-      arr.splice(tgtIdx, 0, item);
+      [arr[srcIdx], arr[tgtIdx]] = [arr[tgtIdx], arr[srcIdx]];
       renderPlan();
     }
   } else if (src.classList.contains('ingredient') && tgt.classList.contains('ingredient')) {
@@ -403,8 +483,7 @@ function handleDrop(e) {
     const tgtIdx = +tgt.dataset.ingidx;
     if (srcIdx !== tgtIdx) {
       const arr = planData[timeslot][menuIdx].dishes[dishIdx].ingredients;
-      const [item] = arr.splice(srcIdx, 1);
-      arr.splice(tgtIdx, 0, item);
+      [arr[srcIdx], arr[tgtIdx]] = [arr[tgtIdx], arr[srcIdx]];
       renderPlan();
     }
   }
